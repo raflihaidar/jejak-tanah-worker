@@ -1,0 +1,39 @@
+{
+  "type": "module",
+  "name": "jejak-tanah-worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node --watch src/index.js",
+    "worker": "node --watch src/worker.js",
+    "start": "node src/index.js",
+    "start:worker": "node src/worker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prisma": "^7.3.0",
+    "viem": "^2.49.3"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^7.3.0",
+    "axios": "^1.16.1",
+    "bullmq": "^5.76.8",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.0.0",
+    "eciesjs": "^0.5.0",
+    "express": "^5.2.1",
+    "form-data": "^4.0.5",
+    "handlebars": "^4.7.8",
+    "ioredis": "^5.10.1",
+    "pinata": "^2.5.1",
+    "puppeteer": "^24.37.5",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tanda Terima Dokumen - BPN RI</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --gold: #b8860b;
+        --gold-light: #d4a017;
+        --navy: #1a2744;
+        --text: #1c1c1c;
+        --muted: #555;
+        --border: #c8c0a8;
+        --bg: #fdfaf4;
+        --stripe: #f5f0e8;
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+        .page {
+          box-shadow: none;
+        }
+        .no-print {
+          display: none;
+        }
+      }
+
+      body {
+        font-family: "Source Sans 3", sans-serif;
+        background: #e8e2d5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        min-height: 100vh;
+        color: var(--text);
+      }
+
+      /* Print button */
+      .no-print {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 12px;
+      }
+      .btn-print {
+        background: var(--navy);
+        color: white;
+        border: none;
+        padding: 10px 28px;
+        font-family: "Source Sans 3", sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        border-radius: 3px;
+        transition: background 0.2s;
+      }
+      .btn-print:hover {
+        background: var(--gold);
+      }
+
+      /* Page */
+      .page {
+        background: var(--bg);
+        width: 794px;
+        min-height: 1123px;
+        padding: 48px 56px 56px;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Decorative border */
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 12px;
+        border: 1.5px solid var(--gold);
+        pointer-events: none;
+        opacity: 0.35;
+      }
+
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        border-bottom: 2.5px solid var(--navy);
+        margin-bottom: 6px;
+      }
+
+      .logo-placeholder {
+        width: 72px;
+        height: 72px;
+        flex-shrink: 0;
+        background: var(--navy);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gold-light);
+        font-size: 10px;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.3;
+        letter-spacing: 0.02em;
+        /* Replace with actual BPN logo: */
+        /* background-image: url('logo-bpn.png'); background-size: cover; */
+      }
+
+      .header-text h1 {
+        font-family: "EB Garamond", serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--navy);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 1.3;
+      }
+
+      .header-text p {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 3px;
+        line-height: 1.5;
+      }
+
+      .header-divider {
+        height: 3px;
+        background: linear-gradient(
+          to right,
+          var(--navy) 60%,
+          var(--gold) 100%
+        );
+        margin-bottom: 28px;
+      }
+
+      /* Document title */
+      .doc-title {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .doc-title h2 {
+        font-family: "EB Garamond", serif;
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--navy);
+        letter-spacing: 0.02em;
+        margin-bottom: 4px;
+      }
+
+      .doc-title .nomor-berkas {
+        font-size: 13px;
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* Pemohon info */
+      .pemohon-section {
+        background: var(--stripe);
+        border-left: 4px solid var(--gold);
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        border-radius: 0 4px 4px 0;
+      }
+
+      .pemohon-section p {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 10px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 5px 0;
+        font-size: 13.5px;
+      }
+
+      .info-label {
+        color: var(--muted);
+      }
+      .info-value {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .info-value::before {
+        content: ": ";
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      /* Kegiatan badge */
+      .badge-kegiatan {
+        display: inline-block;
+        background: var(--navy);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 3px 10px;
+        border-radius: 20px;
+      }
+
+      /* Section heading */
+      .section-heading {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        margin-top: 24px;
+      }
+
+      /* Documents table */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      thead tr {
+        background: var(--navy);
+        color: white;
+      }
+
+      thead th {
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      thead th:first-child {
+        width: 38px;
+        text-align: center;
+        border-radius: 3px 0 0 0;
+      }
+      thead th:last-child {
+        border-radius: 0 3px 0 0;
+      }
+
+      tbody tr {
+        border-bottom: 1px solid var(--border);
+      }
+      tbody tr:nth-child(even) {
+        background: var(--stripe);
+      }
+      tbody tr:hover {
+        background: #ede7d8;
+      }
+
+      tbody td {
+        padding: 9px 12px;
+        vertical-align: top;
+      }
+      tbody td:first-child {
+        text-align: center;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      tbody td:nth-child(2) {
+        font-weight: 500;
+      }
+      tbody td:nth-child(3) {
+        color: var(--navy);
+        font-size: 12px;
+        font-family: "EB Garamond", monospace;
+      }
+
+      /* Biaya table */
+      .biaya-table {
+        margin-top: 24px;
+      }
+
+      .biaya-table table thead th {
+        background: var(--gold);
+      }
+      .biaya-table table thead {
+        background: var(--gold);
+      }
+      .biaya-table table thead tr {
+        background: var(--gold);
+      }
+
+      .biaya-table tbody td:last-child {
+        text-align: right;
+        font-weight: 600;
+      }
+      .biaya-table thead th:last-child {
+        text-align: right;
+      }
+      .biaya-table thead th:nth-child(3) {
+        text-align: center;
+      }
+      .biaya-table tbody td:nth-child(3) {
+        text-align: center;
+      }
+
+      .total-row td {
+        font-weight: 700 !important;
+        background: var(--stripe) !important;
+        border-top: 2px solid var(--gold) !important;
+      }
+
+      /* Footer / signature */
+      .footer-section {
+        margin-top: 32px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .signature-block {
+        text-align: center;
+        width: 240px;
+      }
+
+      .signature-block .place-date {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .signature-block .title {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        line-height: 1.5;
+        letter-spacing: 0.02em;
+      }
+
+      .signature-box {
+        height: 70px;
+        border-bottom: 1.5px solid var(--text);
+        margin: 8px 20px;
+      }
+
+      .signature-name {
+        font-size: 12.5px;
+        font-weight: 700;
+        margin-top: 4px;
+        color: var(--navy);
+      }
+
+      /* Watermark */
+      .watermark {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%) rotate(-30deg);
+        font-family: "EB Garamond", serif;
+        font-size: 72px;
+        color: rgba(26, 39, 68, 0.04);
+        white-space: nowrap;
+        pointer-events: none;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+      }
+
+      /* Page footer note */
+      .page-foot {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10px;
+        color: #aaa;
+        letter-spacing: 0.05em;
+      }
+
+      .divider-gold {
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--gold),
+          transparent
+        );
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="no-print">
+      <button class="btn-print" onclick="window.print()">
+        🖨 Cetak Dokumen
+      </button>
+    </div>
+
+    <div class="page">
+      <div class="watermark">BPN RI</div>
+
+      <!-- HEADER -->
+      <div class="header">
+        <div class="logo-placeholder">LOGO<br />BPN</div>
+        <div class="header-text">
+          <h1>Badan Pertanahan Nasional Republik Indonesia</h1>
+          <p>
+            Kantor Pertanahan Kota Malang<br />
+            Jl. Danau Jonge I-1 Malang, Malang
+          </p>
+        </div>
+      </div>
+      <div class="header-divider"></div>
+
+      <!-- DOCUMENT TITLE -->
+      <div class="doc-title">
+        <h2>Tanda Terima Dokumen</h2>
+        <div class="nomor-berkas">
+          Nomor Berkas Permohonan <strong>67374488 / 2019</strong>
+        </div>
+      </div>
+
+      <div class="divider-gold"></div>
+
+      <!-- PEMOHON INFO -->
+      <div class="pemohon-section">
+        <p>Telah diterima berkas permohonan dari:</p>
+        <div class="info-grid">
+          <span class="info-label">Nama Pemohon</span>
+          <span class="info-value">HOO GO HUK</span>
+
+          <span class="info-label">Alamat</span>
+          <span class="info-value">JL. JAKSA AGUNG SUPRAPTO 1-B/153</span>
+
+          <span class="info-label">Desa/Kelurahan</span>
+          <span class="info-value">Wonokoyo</span>
+
+          <span class="info-label">Kecamatan</span>
+          <span class="info-value">Kedungkandang</span>
+
+          <span class="info-label">Kegiatan</span>
+          <span class="info-value">
+            <span class="badge-kegiatan">#Peralihan Hak - Jual Beli</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- DOCUMENTS TABLE -->
+      <div class="section-heading">
+        Beserta dokumen yang dilampirkan seperti tersebut dibawah ini:
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Dokumen</th>
+            <th>Nomor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Fotocopy KTP / KK</td>
+            <td>3573021404670001-Hoo Go Huk</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Sertipikat Hak Atas Tanah</td>
+            <td>HAT. 12060204103723</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Surat Kuasa Permohonan</td>
+            <td>3573021208790001-AGUS WIYONO</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Akta Jual Beli</td>
+            <td>Akta No. 15/2019</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Fotocopy Pajak Bumi dan Bangunan</td>
+            <td>NOP. 35.73.010.003.012-0063.0</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Fotocopy Surat Setoran Pajak/PPH</td>
+            <td>No. 28FCC1N9RQ603TD2</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Surat Permohonan</td>
+            <td>Lampiran</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Fotocopy KTP / Identitas Pemilik Hak</td>
+            <td>Lampiran</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>Surat Pengantar PPAT</td>
+            <td>Lampiran</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Fotocopy Bea Perolehan Hak Tanah dan Bangunan</td>
+            <td>No. 375/35.73.405/I/2019</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- BIAYA TABLE -->
+      <div class="biaya-table">
+        <div class="section-heading">Rincian Biaya Pekerjaan:</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 38px; text-align: center">No.</th>
+              <th>Uraian Pekerjaan</th>
+              <th style="width: 160px; text-align: center">
+                Bidang/Unit/Luas (m²)
+              </th>
+              <th style="width: 120px">Biaya (Rp)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align: center">1</td>
+              <td>Peralihan Hak - Jual Beli</td>
+              <td style="text-align: center">1</td>
+              <td style="text-align: right; font-weight: 600">114.800</td>
+            </tr>
+            <tr class="total-row">
+              <td
+                colspan="3"
+                style="text-align: right; font-weight: 700; padding-right: 16px"
+              >
+                Jumlah
+              </td>
+              <td style="text-align: right; font-weight: 700">114.800</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SIGNATURE -->
+      <div class="footer-section">
+        <div class="signature-block">
+          <div class="place-date">Malang, 1 April 2019</div>
+          <div class="title">
+            Atas Nama Kepala Kantor Pertanahan<br />Kantor Pertanahan Kota
+            Malang
+          </div>
+          <div class="signature-box"></div>
+          <div class="signature-name">Petugas Loket</div>
+        </div>
+      </div>
+
+      <div class="divider-gold"></div>
+
+      <div class="page-foot">
+        Loket Online &nbsp;·&nbsp;
+        https://loket.atrbpn.go.id/InputLoket/ListEntriBerkas &nbsp;·&nbsp; 1 of
+        2 &nbsp;·&nbsp; 01/04/2019
+      </div>
+    </div>
+  </body>
+</html>

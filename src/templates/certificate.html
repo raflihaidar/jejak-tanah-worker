@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sertipikat Tanah Digital</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Times+New+Roman:ital,wght@0,400;0,700;1,400&family=Arial+Narrow&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="certificate.css" />
+  </head>
+
+  <body>
+    <!-- HALAMAN 1 -->
+    <div class="page-wrapper">
+      <div class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+          <!-- Center: Garuda -->
+          <div class="header-center">
+            <img
+              src="{{garuda_path}}"
+              alt="lambang garuda"
+              class="garuda-svg"
+            />
+            <section class="doc-title">
+              <p>
+                KEMENTERIAN AGRARIA DAN TATA RUANG <br />BADAN PERTANAHAN
+                NASIONAL <br />REPUBLIK INDONESIA
+              </p>
+            </section>
+          </div>
+
+          <!-- Right: Doc code + QR -->
+          <div class="header-right">
+            <section class="doc-edition">
+              <div class="edition-text">Edisi 1</div>
+              <span>|</span>
+              <div class="edition-text">Jual Beli</div>
+            </section>
+            <p class="doc-code">{{code}}</p>
+          </div>
+        </div>
+
+        <!-- TITLE -->
+        <div class="title-section">
+          <div>
+            <h1>Sertipikat {{type}}</h1>
+            <!-- <h1>{{type}}</h1> -->
+          </div>
+          <div class="nib-row">
+            <span class="nib-label">NIB. </span>
+            <span>{{nib}}</span>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <p class="description">
+          Hak Milik ini terdaftar atas nama pemegang hak yang tertera pada
+          bagian PEMEGANG HAK, atas sebidang tanah yang letaknya diuraikan pada
+          bagian BIDANG TANAH, serta batasan dan kewajiban, pembebanan dan
+          pencatatan lainnya yang tertera pada tanda bukti hak ini.
+        </p>
+
+        <!-- SIGNATURE -->
+        <div class="signature-section">
+          <div class="signature-block">
+            <div class="sig-title">
+              Kepala Kantor Pertanahan<br />
+              {{nama_kabupaten}}
+            </div>
+            <!-- QR Tanda Tangan Digital -->
+            <img
+              src="{{qr_ttd}}"
+              width="80"
+              height="80"
+              class="qr-ttd"
+              alt="QR Tanda Tangan"
+            />
+            <!-- Signature line -->
+            <div class="sig-line"></div>
+            <div class="sig-name">{{nama_kepala_kantor}}</div>
+            <div class="sig-name">NIP. {{nip}}</div>
+          </div>
+        </div>
+
+        <!-- BIDANG TANAH -->
+        <div class="section">
+          <div class="section-label">BIDANG TANAH&nbsp; :&nbsp;</div>
+          <p class="address-value">
+            Bidang tanah ini terletak di {{street_address}} Kelurahan {{ward}}
+            Kecamatan {{subdistrict}} Kabupaten {{regency}} Provinsi
+            {{province}} seluas {{area_size}} m²
+          </p>
+        </div>
+
+        <!-- PEMEGANG HAK -->
+        <div class="section">
+          <div class="section-label">PEMEGANG HAK&nbsp; :&nbsp;</div>
+          {{#each owners}}
+          <p class="pemegang-value">
+            {{this.no}}. {{this.name}} - {{this.birthPlace}}, {{this.birthDate}}
+            - {{this.share}} bagian
+          </p>
+          {{/each}}
+        </div>
+
+        <!-- CATATAN -->
+        <div class="section">
+          <div class="section-label">CATATAN PENDAFTARAN&nbsp; :&nbsp;</div>
+          {{#each notes}}
+          <ol class="pemegang-value">
+            {{this.no}}. {{this.note}}
+          </ol>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+
+    <!-- HALAMAN 2 -->
+    <div class="page-wrapper">
+      <div class="main-content">
+        <!-- LETAK BIDANG TANAH -->
+        <div class="section">
+          <div class="section-label">LETAK BIDANG TANAH</div>
+          <div class="map-container">
+            <!-- LETA K BIDANG TANAH -->
+            <div class="section">
+              <div class="map-container">
+                <svg
+                  width="100%"
+                  height="100%"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style="background: #e8e4d8"
+                >
+                  <!-- Grid jalan -->
+                  <line
+                    x1="0"
+                    y1="80"
+                    x2="700"
+                    y2="60"
+                    stroke="#fff"
+                    stroke-width="18"
+                  />
+                  <line
+                    x1="0"
+                    y1="80"
+                    x2="700"
+                    y2="60"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="160"
+                    x2="700"
+                    y2="140"
+                    stroke="#fff"
+                    stroke-width="12"
+                  />
+                  <line
+                    x1="0"
+                    y1="160"
+                    x2="700"
+                    y2="140"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="220"
+                    x2="700"
+                    y2="200"
+                    stroke="#fff"
+                    stroke-width="28"
+                  />
+                  <line
+                    x1="0"
+                    y1="220"
+                    x2="700"
+                    y2="200"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+
+                  <line
+                    x1="120"
+                    y1="0"
+                    x2="100"
+                    y2="280"
+                    stroke="#fff"
+                    stroke-width="14"
+                  />
+                  <line
+                    x1="120"
+                    y1="0"
+                    x2="100"
+                    y2="280"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="280"
+                    y1="0"
+                    x2="260"
+                    y2="280"
+                    stroke="#fff"
+                    stroke-width="22"
+                  />
+                  <line
+                    x1="280"
+                    y1="0"
+                    x2="260"
+                    y2="280"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="460"
+                    y1="0"
+                    x2="440"
+                    y2="280"
+                    stroke="#fff"
+                    stroke-width="10"
+                  />
+                  <line
+                    x1="460"
+                    y1="0"
+                    x2="440"
+                    y2="280"
+                    stroke="#d4cfc0"
+                    stroke-width="1"
+                  />
+
+                  <!-- Blok bangunan -->
+                  <rect
+                    x="10"
+                    y="10"
+                    width="90"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="130"
+                    y="10"
+                    width="130"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="290"
+                    y="10"
+                    width="140"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="470"
+                    y="10"
+                    width="100"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="580"
+                    y="10"
+                    width="110"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+
+                  <rect
+                    x="10"
+                    y="95"
+                    width="80"
+                    height="50"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="130"
+                    y="90"
+                    width="110"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="290"
+                    y="90"
+                    width="130"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="470"
+                    y="90"
+                    width="90"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="580"
+                    y="90"
+                    width="110"
+                    height="55"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+
+                  <rect
+                    x="10"
+                    y="175"
+                    width="80"
+                    height="95"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="130"
+                    y="175"
+                    width="110"
+                    height="95"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="470"
+                    y="175"
+                    width="90"
+                    height="95"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+                  <rect
+                    x="580"
+                    y="175"
+                    width="110"
+                    height="95"
+                    fill="#d8d2c0"
+                    stroke="#bbb"
+                    stroke-width="0.5"
+                  />
+
+                  <!-- Bidang tanah yang ditandai (ungu) -->
+                  <polygon
+                    points="295,175 390,170 395,265 290,268"
+                    fill="#7a7acd"
+                    fill-opacity="0.75"
+                    stroke="#4444aa"
+                    stroke-width="1.5"
+                  />
+
+                  <!-- Kompas -->
+                  <g transform="translate(26,248)">
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="14"
+                      fill="white"
+                      fill-opacity="0.85"
+                      stroke="#aaa"
+                      stroke-width="0.5"
+                    />
+                    <polygon points="0,-10 3,0 0,-2 -3,0" fill="#333" />
+                    <polygon points="0,10 3,0 0,2 -3,0" fill="#aaa" />
+                    <text
+                      x="0"
+                      y="-13"
+                      text-anchor="middle"
+                      font-size="7"
+                      font-family="Arial"
+                      font-weight="bold"
+                      fill="#333"
+                    >
+                      U
+                    </text>
+                  </g>
+
+                  <!-- Scale bar -->
+                  <g transform="translate(560,260)">
+                    <rect x="0" y="0" width="20" height="5" fill="#333" />
+                    <rect
+                      x="20"
+                      y="0"
+                      width="20"
+                      height="5"
+                      fill="#fff"
+                      stroke="#333"
+                      stroke-width="0.5"
+                    />
+                    <rect x="40" y="0" width="20" height="5" fill="#333" />
+                    <text
+                      x="0"
+                      y="14"
+                      font-size="7"
+                      font-family="Arial"
+                      fill="#333"
+                    >
+                      0
+                    </text>
+                    <text
+                      x="28"
+                      y="14"
+                      font-size="7"
+                      font-family="Arial"
+                      fill="#333"
+                    >
+                      25
+                    </text>
+                    <text
+                      x="54"
+                      y="14"
+                      font-size="7"
+                      font-family="Arial"
+                      fill="#333"
+                    >
+                      50m
+                    </text>
+                  </g>
+
+                  <!-- Watermark OpenStreetMap -->
+                  <text
+                    x="690"
+                    y="275"
+                    text-anchor="end"
+                    font-size="7"
+                    font-family="Arial"
+                    fill="#888"
+                  >
+                    © OpenStreetMap
+                  </text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERHATIAN -->
+        <div class="section perhatian-section-block">
+          <div class="section-label">PERHATIAN</div>
+          <ul class="perhatian-list">
+            <li>
+              Asli dokumen ini berbentuk dokumen elektronik yang ditandatangani
+              dengan tanda tangan elektronik yang telah disertifikasi oleh Balai
+              Sertifikasi Elektronik (BSrE).
+            </li>
+            <li>
+              Dilarang melakukan perubahan dan/atau pemalsuan kepada pihak yang
+              tidak berkepentingan.
+            </li>
+            <li>
+              Pemalsuan surat atau manipulasi informasi elektronik dan/atau
+              dokumen elektronik dapat dikenakan Pasal 263 KUHP dengan ancaman
+              paling sedikit 6 (enam) tahun penjara atau Pasal 35 jo. Pasal 51
+              (1) UU ITE dengan ancaman hukuman paling lama 12 (dua belas) tahun
+              penjara dan/atau denda paling banyak Rp12 miliar (dua belas miliar
+              rupiah).
+            </li>
+            <li>
+              Untuk mencegah pemalsuan atas hasil cetak sertipikat elektronik,
+              halaman pertama sertipikat elektronik mempunyai nomor seri blanko
+              yang tercatat dalam sistem elektronik.
+            </li>
+            <li>
+              Untuk memastikan keaslian dokumen ini dapat dilihat dengan
+              menggunakan aplikasi resmi dari Kementerian yang memastikan
+              dokumen elektronik dan informasi terkait status dari dokumen ini.
+            </li>
+            <li>
+              Luas yang tertera pada tanda bukti hak ini sesuai dengan hasil
+              pada saat pengukuran. Luas dapat berubah apabila dilakukan
+              pengukuran ulang.
+            </li>
+            <li>
+              Gambar letak bidang tanah menggunakan layanan OpenStreetMap dengan
+              skala dan sistem referensi koordinat bidang tanah yang berbeda
+              sehingga dapat terjadi perbedaan tidak pada peta.
+            </li>
+            <li>
+              Pemegang hak wajib mengetahui dan menjaga batas-batas bidang
+              tanah.
+            </li>
+            <li>
+              Setiap perbuatan hukum atas bidang tanah ini termasuk pengajuan
+              jual beli, perjanjian sewa atau bentuk lainnya wajib didaftarkan
+              ke Kantor Pertanahan setempat.
+            </li>
+            <li>
+              Apabila bidang tanah akan dijadikan jaminan utang hanya dapat
+              dilakukan melalui lembaga Hak Tanggungan. Hasil cetak sertipikat
+              elektronik ini tidak diperbolehkan untuk dijadikan jaminan utang
+              dalam bentuk gadai atau bentuk lainnya selain Hak Tanggungan.
+            </li>
+          </ul>
+        </div>
+
+        <!-- QR PERHATIAN (pojok kanan bawah) -->
+        <div class="qr-bottom-right">
+          <img src="{{qr_doc}}" width="80" height="80" alt="" />
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

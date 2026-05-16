@@ -1,0 +1,276 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #d0c8b0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem 0;
+  align-items: center;
+  min-height: 100vh;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.page-wrapper {
+  width: 794px;
+  min-height: 1123px;
+  background: #f6f6f6;
+  border: 1px solid #b0a080;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  padding: 40px 80px 40px 80px;
+  position: relative;
+  max-width: 794px;
+  margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.header-center {
+  text-align: center;
+}
+
+.header-right {
+  position: absolute;
+  right: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  justify-items: end;
+  align-items: end;
+  gap: 0 1rem;
+}
+
+.doc-edition {
+  display: flex;
+  align-items: center;
+  gap: 0 0.5rem;
+}
+
+.edition-text {
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 13px;
+  color: #111;
+  letter-spacing: 1px;
+}
+
+.doc-code {
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #111;
+  letter-spacing: 1px;
+}
+
+.qr-ttd {
+  width: 80px;
+  height: 80px;
+  display: block;
+  margin: 6px auto;
+}
+
+.garuda-svg {
+  width: 62px;
+  height: 62px;
+}
+
+.doc-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ===== TITLE ===== */
+.title-section {
+  text-align: center;
+  margin: 10px 0 6px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.title-section h1 {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #111;
+  font-family: Arial, sans-serif;
+}
+
+.nib-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 7px;
+  gap: 10px;
+}
+
+.nib-label {
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  color: #111;
+}
+
+.nib-value {
+  color: #111;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  letter-spacing: 1px;
+  min-width: 160px;
+  text-align: center;
+  border-radius: 2px;
+  border: 1px solid #555;
+}
+
+/* ===== DESCRIPTION ===== */
+.description {
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 10px 0 8px 0;
+  text-align: justify;
+  color: #111;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== SECTION BLOCKS ===== */
+.section {
+  margin-top: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.section-label {
+  font-weight: bold;
+  font-size: 11.5px;
+  font-family: Arial, sans-serif;
+  color: #111;
+  margin-bottom: 2px;
+}
+
+.address-value {
+  font-size: 11.5px;
+  font-family: Arial, sans-serif;
+  color: #111;
+  margin: 2px 0px;
+}
+
+.pemegang-value {
+  color: #111;
+  font-size: 11px;
+  min-width: 200px;
+  border-radius: 2px;
+  font-weight: normal;
+}
+
+/* ===== CATATAN ===== */
+.catatan-section {
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.catatan-content {
+  font-size: 10.5px;
+  line-height: 1.65;
+  text-align: justify;
+  color: #111;
+}
+
+/* ===== SIGNATURE ===== */
+.signature-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.signature-block {
+  text-align: center;
+  width: 220px;
+}
+
+.sig-title {
+  font-size: 10.5px;
+  font-family: Arial, sans-serif;
+  color: #111;
+  font-weight: bold;
+  line-height: 1.5;
+}
+
+.sig-line {
+  width: 140px;
+  border-top: 1px solid #333;
+  margin: 4px auto 0 auto;
+}
+
+.sig-name {
+  color: #111;
+  padding: 2px 14px;
+  font-size: 10px;
+  min-width: 160px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-top: 6px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== HALAMAN 2 ===== */
+.map-container {
+  width: 100%;
+  height: 280px;
+  border: 1px solid #888;
+  margin-top: 6px;
+  overflow: hidden;
+  background: #e8e4d0;
+}
+
+.map-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.perhatian-section-block {
+  margin-top: 20px;
+}
+
+.perhatian-list {
+  margin-left: 18px;
+  padding: 0;
+  margin-top: 4px;
+}
+
+.perhatian-list li {
+  font-size: 9.5px;
+  line-height: 1.6;
+  color: #111;
+  font-family: Arial, sans-serif;
+  text-align: justify;
+  margin-bottom: 4px;
+}
+
+.qr-bottom-right {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}

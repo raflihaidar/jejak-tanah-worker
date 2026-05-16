@@ -1,0 +1,563 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CertificateStatus {
+  AKTIF
+  DALAM_PROSES
+  BERMASALAH
+  TIDAK_AKTIF
+}
+
+enum ApplicationStatus {
+  VERIFIKASI_BERKAS
+  MENUNGGU_PEMBAYARAN
+  PENANDATANGANAN
+  DITOLAK
+  SELESAI
+}
+
+enum Section {
+  DASHBOARD
+  MASTER
+  SETTING
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum DocumentType {
+  KTP_PEMBELI
+  KTP_PENJUAL
+  KK_PEMBELI
+  AKTA_JUAL_BELI
+  PBB
+  SPPT
+  SSB
+  SERTIFIKAT_TANAH
+}
+
+enum CertificateType {
+  SHM // Sertifikat Hak Milik
+  SHGB // Sertifikat Hak Guna Bangunan
+  SHGU // Sertifikat Hak Guna Usaha
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  EXPIRED
+}
+
+enum MintingStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+enum QueueStatus {
+  MENUNGGU
+  DIPANGGIL
+  // DILAYANI
+  SELESAI
+  TIDAK_HADIR
+}
+
+enum DayOfWeek {
+  SENIN
+  SELASA
+  RABU
+  KAMIS
+  JUMAT
+  SABTU
+  MINGGU
+}
+
+model Person {
+  id             String  @id @default(uuid()) @db.Uuid
+  wallet_address String? @unique @db.VarChar(50)
+
+  land_office_id String? @db.Uuid
+
+  name       String?   @unique @db.VarChar(150)
+  nik        String?   @unique @db.VarChar(20)
+  phone      String?   @db.VarChar(20)
+  birthPlace String?   @db.VarChar(100)
+  birthDate  DateTime?
+  gender     Gender?
+  address    String?   @db.Text
+
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime?
+
+  email    String? @unique @db.VarChar(150)
+  username String? @unique @db.VarChar(100)
+  password String? @db.VarChar(100)
+
+  nip        String? @db.VarChar(20)
+  publicKey  String? @db.Text
+  privateKey String? @db.Text
+
+  nonce     String?  @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountVerifications AccountVerification[]
+  verifiedAccounts     AccountVerification[] @relation("VerificationApprover")
+  DeedOwner            Deed[]                @relation("DeedOwner")
+  DeedCreator          Deed[]                @relation("DeedCreator")
+  officerApplications  Application[]         @relation("ApplicationOfficer")
+  applications         Application[]
+  roles                RolePerson[]
+  landOffice           LandOffice?           @relation(fields: [land_office_id], references: [id])
+  certificateOwners    CertificateOwner[]
+  applicationOwners    ApplicationOwner[]
+  headOfLandOffice     LandOffice?           @relation("HeadOffice")
+  documentIdentity     ApplicationDocument[]
+  queues               Queue[]
+
+  @@map("persons")
+}
+
+model Land {
+  id             String  @id @default(uuid()) @db.Uuid
+  area_size      String? @db.VarChar(100)
+  street_address String  @db.Text
+  rt             String  @db.VarChar(50)
+  rw             String  @db.VarChar(50)
+
+  province_code Int    @db.Integer
+  regency_code  Int    @db.Integer
+  district_code Int    @db.Integer
+  village_code  String @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  province Province @relation(fields: [province_code], references: [code])
+  regency  Regency  @relation(fields: [regency_code], references: [code])
+  district District @relation(fields: [district_code], references: [code])
+  village  Village  @relation(fields: [village_code], references: [code])
+
+  certificates Certificate[]
+  applications Application[]
+
+  @@map("lands")
+}
+
+model LandOffice {
+  id      String  @id @default(uuid()) @db.Uuid
+  name    String  @db.VarChar(150)
+  code    String  @unique @db.VarChar(50)
+  address String? @db.Text
+
+  province String @db.VarChar(100)
+  regency  String @db.VarChar(100)
+
+  phone String? @db.VarChar(20)
+  email String? @db.VarChar(150)
+
+  head_office_id String? @unique @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  headOffice       Person?            @relation("HeadOffice", fields: [head_office_id], references: [id])
+  employees        Person[]
+  applications     Application[]
+  price            LandOfficePrice?
+  loket            Loket[]
+  operationalHours OperationalHours[]
+
+  @@map("land_offices")
+}
+
+model OperationalHours {
+  id             String    @id @default(uuid()) @db.Uuid
+  land_office_id String    @db.Uuid
+  day            DayOfWeek
+
+  is_open      Boolean @default(true)
+  opening_time String  @db.VarChar(5)
+  closing_time String  @db.VarChar(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  landOffice LandOffice @relation(fields: [land_office_id], references: [id])
+
+  @@unique([land_office_id, day])
+  @@map("operational_hours")
+}
+
+model LandOfficePrice {
+  id String @id @default(uuid()) @db.Uuid
+
+  land_office_id String @unique @db.Uuid
+
+  price_per_m2     Int
+  registration_fee Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  landOffice LandOffice @relation(fields: [land_office_id], references: [id])
+
+  @@map("land_office_prices")
+}
+
+model Province {
+  id   Int    @id @default(autoincrement())
+  code Int    @unique
+  name String @db.VarChar(50)
+
+  regencies Regency[]
+  lands     Land[]
+
+  @@map("provinces")
+}
+
+model Regency {
+  id            Int    @id @default(autoincrement())
+  code          Int    @unique
+  province_code Int
+  name          String @db.VarChar(50)
+
+  province Province @relation(fields: [province_code], references: [code])
+
+  districts District[]
+  lands     Land[]
+
+  @@map("regencies")
+}
+
+model District {
+  id           Int @id @default(autoincrement())
+  code         Int @unique
+  regency_code Int
+
+  name String @db.VarChar(50)
+
+  regency Regency @relation(fields: [regency_code], references: [code])
+
+  villages Village[]
+  lands    Land[]
+
+  @@map("districts")
+}
+
+model Village {
+  id            Int    @id @default(autoincrement())
+  code          String @unique @db.VarChar(255)
+  district_code Int
+
+  name String @db.VarChar(50)
+
+  district District @relation(fields: [district_code], references: [code])
+
+  lands Land[]
+
+  @@map("villages")
+}
+
+model Certificate {
+  id             String            @id @default(uuid()) @db.Uuid
+  token_id       Int?              @unique @db.Integer
+  nib            String            @db.VarChar(100)
+  code           String            @unique @db.VarChar(100)
+  land_id        String            @db.Uuid
+  cid            String?           @unique @db.VarChar(255)
+  status         CertificateStatus @default(AKTIF)
+  type           CertificateType
+  label          String?           @db.VarChar(100)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @default(now())
+  hash           String?           @db.VarChar(255)
+  application_id String?           @unique @db.Uuid
+  tx_hash        String?           @db.VarChar(255)
+  payment_status PaymentStatus     @default(PENDING)
+  minting_status MintingStatus     @default(PENDING)
+
+  land        Land               @relation(fields: [land_id], references: [id])
+  application Application?       @relation(fields: [application_id], references: [id])
+  owners      CertificateOwner[]
+  notes       CertificateNote[]
+
+  @@map("certificates")
+}
+
+model CertificateNote {
+  id             String   @id @default(uuid())
+  certificate_id String   @db.Uuid
+  note           String
+  created_at     DateTime @default(now())
+
+  certificate Certificate @relation(fields: [certificate_id], references: [id])
+
+  @@map("certificate_notes")
+}
+
+model CertificateOwner {
+  id             String   @id @default(uuid()) @db.Uuid
+  certificate_id String   @db.Uuid
+  person_id      String   @db.Uuid
+  ownership_pct  Decimal  @db.Decimal(5, 4)
+  createdAt      DateTime @default(now())
+
+  certificate Certificate @relation(fields: [certificate_id], references: [id])
+  person      Person      @relation(fields: [person_id], references: [id])
+
+  @@unique([certificate_id, person_id])
+  @@map("certificate_owners")
+}
+
+model Deed {
+  id          String @id @default(uuid()) @db.Uuid
+  number      String @unique @db.VarChar(100)
+  description String @db.VarChar(150)
+  cid         String @db.VarChar(255)
+
+  person_id String @db.Uuid
+  createdBy String @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   Person @relation("DeedOwner", fields: [person_id], references: [id])
+  creator Person @relation("DeedCreator", fields: [createdBy], references: [id])
+
+  @@map("deeds")
+}
+
+model Application {
+  id             String  @id @default(uuid()) @db.Uuid
+  person_id      String  @db.Uuid
+  land_id        String  @db.Uuid
+  land_office_id String  @db.Uuid
+  officer_id     String? @db.Uuid
+
+  status ApplicationStatus @default(VERIFIKASI_BERKAS)
+  type   CertificateType
+  nib    String            @db.VarChar(100)
+
+  file_number       String @unique @db.VarChar(100)
+  cert_code         String @db.VarChar(100)
+  land_price_per_m2 Int    @db.Integer
+  registration_fee  Int    @db.Integer
+  total_fee         BigInt @default(0)
+
+  notes           String?   @db.VarChar(200)
+  payment_tx_hash String?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+
+  land        Land                  @relation(fields: [land_id], references: [id])
+  person      Person                @relation(fields: [person_id], references: [id])
+  landOffice  LandOffice            @relation(fields: [land_office_id], references: [id])
+  officer     Person?               @relation("ApplicationOfficer", fields: [officer_id], references: [id])
+  document    ApplicationDocument[]
+  owners      ApplicationOwner[]
+  certificate Certificate?
+
+  @@map("applications")
+}
+
+model ApplicationDocument {
+  id             String  @id @default(uuid()) @db.Uuid
+  application_id String  @db.Uuid
+  person_id      String? @db.Uuid
+
+  type DocumentType
+
+  fileUrl  String  @db.VarChar(255)
+  fileName String  @db.VarChar(255)
+  mimeType String  @db.VarChar(100)
+  fileSize Int
+  fileHash String? @db.VarChar(128)
+
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  person      Person?     @relation(fields: [person_id], references: [id])
+
+  @@unique([application_id, person_id, type])
+  @@map("application_documents")
+}
+
+model ApplicationOwner {
+  id String @id @default(uuid()) @db.Uuid
+
+  application_id String @db.Uuid
+  person_id      String @db.Uuid
+
+  share Decimal? @db.Decimal(5, 4)
+
+  application Application @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  person      Person      @relation(fields: [person_id], references: [id])
+
+  @@unique([application_id, person_id])
+  @@map("application_owners")
+}
+
+model Queue {
+  id        String @id @default(uuid()) @db.Uuid
+  loket_id  String @db.Uuid
+  person_id String @db.Uuid
+
+  queue_number Int
+  queue_date   DateTime    @db.Date
+  status       QueueStatus @default(MENUNGGU)
+
+  called_at DateTime?
+  served_at DateTime?
+  done_at   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loket  Loket  @relation(fields: [loket_id], references: [id])
+  person Person @relation(fields: [person_id], references: [id])
+
+  @@unique([loket_id, queue_date, queue_number])
+  @@index([loket_id, queue_date, status])
+  @@map("queues")
+}
+
+model Loket {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @db.VarChar(100)
+  description String?    @db.Text
+  is_active   Boolean    @default(true)
+  office_id   String     @db.Uuid
+  office      LandOffice @relation(fields: [office_id], references: [id])
+
+  queue Queue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lokets")
+}
+
+model FileCounter {
+  id    Int @id @default(1)
+  value Int @default(0)
+
+  @@map("file_counters")
+}
+
+model Module {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(50)
+  slug        String       @unique @db.VarChar(50)
+  description String?
+  section     String?
+  privileges  Privilege[]
+  groupId     Int?         @map("group_id")
+  moduleGroup ModuleGroup? @relation(fields: [groupId], references: [id])
+
+  @@map("modules")
+}
+
+model ModuleGroup {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique @db.VarChar(50)
+  slug    String   @unique @db.VarChar(100)
+  section Section
+  modules Module[]
+
+  @@map("module_groups")
+}
+
+model Role {
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  description String?
+  created_at  DateTime        @default(now())
+  privileges  RolePrivilege[]
+  rolePersons RolePerson[]
+
+  @@map("roles")
+}
+
+model Privilege {
+  id        Int             @id @default(autoincrement())
+  name      String          @db.VarChar(50)
+  module_id Int
+  action    String
+  module    Module          @relation(fields: [module_id], references: [id])
+  roles     RolePrivilege[]
+
+  @@map("privileges")
+}
+
+model RolePrivilege {
+  id           Int       @id @default(autoincrement())
+  role_id      Int
+  privilege_id Int
+  created_at   DateTime  @default(now())
+  role         Role      @relation(fields: [role_id], references: [id])
+  privilege    Privilege @relation(fields: [privilege_id], references: [id])
+
+  @@unique([role_id, privilege_id])
+  @@map("role_privileges")
+}
+
+model RolePerson {
+  id         Int      @id @default(autoincrement())
+  role_id    Int
+  person_id  String   @db.Uuid
+  created_at DateTime @default(now())
+  person     Person   @relation(fields: [person_id], references: [id])
+  role       Role     @relation(fields: [role_id], references: [id])
+
+  @@unique([person_id, role_id])
+  @@map("role_persons")
+}
+
+model AccountVerification {
+  id String @id @default(uuid()) @db.Uuid
+
+  person_id String @db.Uuid
+  person    Person @relation(fields: [person_id], references: [id])
+
+  fullName   String   @db.VarChar(150)
+  nik        String   @db.VarChar(20)
+  phone      String   @db.VarChar(20)
+  birthPlace String   @db.VarChar(100)
+  birthDate  DateTime
+  gender     Gender
+  address    String   @db.Text
+
+  status          VerificationStatus @default(PENDING)
+  rejectionReason String?            @db.Text
+  publicKey       String?            @db.Text
+  privateKey      String?            @db.Text
+  wallet_address  String?            @unique @db.VarChar(50)
+
+  verifiedBy String? @db.Uuid
+  verifier   Person? @relation("VerificationApprover", fields: [verifiedBy], references: [id])
+
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("account_verifications")
+}
