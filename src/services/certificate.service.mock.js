@@ -7,92 +7,155 @@ import {
 } from "./certificate.service.js";
 import { findHeadOfficeByLandOffice } from "./officer.service.js";
 
-// Data dummy yang merepresentasikan hasil query Prisma
-const MOCK_APPLICATION = {
-  id: "app-mock-001",
-  type: "SHM",
-  land_office_id: "lo-001",
-  land_id: "land-001",
-  cert_code: "OLD-001",
-  person: {
-    wallet_address: "0xMockWallet123",
-    publicKey: "mock-public-key",
+// ─── Debug Logger ──────────────────────────────────────────────────────────────
+const log = {
+  section: (title) => {
+    console.log("\n" + "═".repeat(60));
+    console.log(`  ${title}`);
+    console.log("═".repeat(60));
   },
-  land: {
-    area_size: 150,
-    street_address: "Jl. Mock No. 1",
-    village: { name: "desa mock" },
-    district: { name: "kecamatan mock" },
-    regency: { name: "kab mock" },
-    province: { name: "jawa timur" },
+  step: (label) => {
+    console.log("\n" + "─".repeat(50));
+    console.log(`  ▶ ${label}`);
+    console.log("─".repeat(50));
   },
-  landOffice: { name: "Kantor Pertanahan Mock", id: "lo-001" },
-  certificate: null,
-  owners: [
-    {
-      share: "1/1",
-      person: {
-        id: "person-001",
-        name: "Budi Santoso Mock",
-        birthPlace: "Surabaya",
-        birthDate: new Date("1990-01-01"),
-        wallet_address: "0xOwner123",
-        publicKey: "owner-mock-pubkey",
-      },
-    },
-  ],
+  data: (label, data) => {
+    console.log(`\n📦 ${label}:`);
+    try {
+      console.log(JSON.stringify(data, jsonReplacer, 2));
+    } catch {
+      console.log(String(data));
+    }
+  },
+  ok: (msg) => console.log(`✅ ${msg}`),
+  err: (msg, err) => {
+    console.log(`❌ ${msg}`);
+    if (err) {
+      console.log(`   Message : ${err.message}`);
+      console.log(
+        `   Stack   : ${err.stack?.split("\n").slice(0, 3).join(" | ")}`,
+      );
+    }
+  },
+  warn: (msg) => console.log(`⚠️  ${msg}`),
+  info: (msg) => console.log(`ℹ️  ${msg}`),
+  timing: (label, ms) => console.log(`⏱  ${label}: ${ms.toFixed(2)} ms`),
 };
 
+// Replacer agar Date & BigInt tidak error di JSON.stringify
+function jsonReplacer(key, value) {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "bigint") return value.toString();
+  if (Buffer.isBuffer(value)) return `[Buffer ${value.length} bytes]`;
+  return value;
+}
+
+// ─── Timer helper ──────────────────────────────────────────────────────────────
+function timer() {
+  const start = Date.now();
+  return () => Date.now() - start;
+}
+
+// ─── generateCertificate (dengan debug penuh) ─────────────────────────────────
 export const generateCertificate = async (fileNumber, notes) => {
-  console.log(`[MOCK] generateCertificate — fileNumber: ${fileNumber}`);
+  log.section(`generateCertificate — START`);
+  log.data("Input args", { fileNumber, notes });
 
-  const mockCode = `CERT-MOCK-${Date.now()}`;
-  const mockNib = `NIB-${Math.floor(Math.random() * 999999)}`;
-  const mockTokenId = `token-${Date.now()}`;
-  const mockCid = `Qm${Math.random().toString(36).slice(2, 38)}`;
-  const mockTxHash = `0x${Math.random().toString(16).slice(2, 66)}`;
+  // ── 1. Prisma: findUnique application ─────────────────────────────────────
+  log.step("1. prisma.application.findUnique");
+  log.data("Query where", { file_number: fileNumber });
 
-  // Dapatkan application nya
-  const application = await prisma.application.findUnique({
-    where: { file_number: fileNumber },
-    include: {
-      land: {
-        include: {
-          province: true,
-          regency: true,
-          district: true,
-          village: true,
+  let application;
+  const t1 = timer();
+  try {
+    application = await prisma.application.findUnique({
+      where: { file_number: fileNumber },
+      include: {
+        land: {
+          include: {
+            province: true,
+            regency: true,
+            district: true,
+            village: true,
+          },
+        },
+        landOffice: true,
+        certificate: true,
+        person: true,
+        owners: {
+          include: { person: true },
         },
       },
-      landOffice: true,
-      certificate: true,
-      person: true,
-      owners: {
-        include: {
-          person: true,
-        },
-      },
-    },
-  });
-
-  if (!application) {
-    console.log("Application tidak ditemukan");
+    });
+    log.timing("findUnique", t1());
+    log.data("application", application);
+  } catch (err) {
+    log.err("prisma.application.findUnique GAGAL", err);
+    throw err;
   }
 
+  if (!application) {
+    log.err(`Application dengan file_number '${fileNumber}' tidak ditemukan`);
+    throw new Error(`Application tidak ditemukan: ${fileNumber}`);
+  }
+  log.ok(`Application ditemukan — id: ${application.id}`);
+
+  // ── 2. findHeadOfficeByLandOffice ─────────────────────────────────────────
+  log.step("2. findHeadOfficeByLandOffice");
+  log.data("Input land_office_id", application.land_office_id);
+
+  let headOffice;
+  const t2 = timer();
+  try {
+    headOffice = await findHeadOfficeByLandOffice(application.land_office_id);
+    log.timing("findHeadOfficeByLandOffice", t2());
+    log.data("headOffice", headOffice);
+  } catch (err) {
+    log.err("findHeadOfficeByLandOffice GAGAL", err);
+    throw err;
+  }
+
+  if (!headOffice) {
+    log.warn(
+      "headOffice null — lanjut tapi mungkin error di buildCertificateAssets",
+    );
+  } else {
+    log.ok(`headOffice ditemukan — id: ${headOffice.id}`);
+  }
+
+  // ── 3. buildCertificateAssets ─────────────────────────────────────────────
+  log.step("3. buildCertificateAssets");
   const hasExistingCert = application.certificate;
+  log.data("hasExistingCert", hasExistingCert);
+  log.data("application (ringkas) dikirim ke buildCertificateAssets", {
+    id: application.id,
+    type: application.type,
+    land_office_id: application.land_office_id,
+    land_id: application.land_id,
+    cert_code: application.cert_code,
+    person: application.person,
+    land: application.land,
+    owners: application.owners,
+  });
 
-  const headOffice = await findHeadOfficeByLandOffice(
-    application.land_office_id,
-  );
+  let code, nib;
+  const t3 = timer();
+  try {
+    ({ code, nib } = await buildCertificateAssets(
+      application,
+      headOffice,
+      hasExistingCert,
+    ));
+    log.timing("buildCertificateAssets", t3());
+    log.data("buildCertificateAssets result", { code, nib });
+  } catch (err) {
+    log.err("buildCertificateAssets GAGAL", err);
+    throw err;
+  }
+  log.ok(`code: ${code} | nib: ${nib}`);
 
-  const { code, nib } = await buildCertificateAssets(
-    application,
-    headOffice,
-    hasExistingCert,
-  );
-
-  const documentHash = "pending";
-
+  // ── 4. Build owners array ─────────────────────────────────────────────────
+  log.step("4. Build owners array");
   const owners = application.owners.map((owner, index) => ({
     no: index + 1,
     id: owner.person.id,
@@ -101,13 +164,12 @@ export const generateCertificate = async (fileNumber, notes) => {
     birthDate: formatDateIndonesia(owner.person.birthDate),
     share: owner.share,
   }));
+  log.data("owners", owners);
 
-  // ─── 1. Skip: prisma.application.findUnique (pakai data mock) ──────────
-
-  // ─── 2. Skip: buildCertificateAssets (heavy I/O) ───────────────────────
-
-  // ─── 3. NYATA: createCertificate insert ke Postgres ────────────────────
-  const result = await createCertificate({
+  // ── 5. createCertificate ──────────────────────────────────────────────────
+  log.step("5. createCertificate (insert ke Postgres)");
+  const documentHash = "pending";
+  const createInput = {
     old_code: application.cert_code,
     nib,
     hash: documentHash,
@@ -118,34 +180,73 @@ export const generateCertificate = async (fileNumber, notes) => {
     application_id: application.id,
     notes,
     owners,
-  });
+  };
+  log.data("createCertificate input", createInput);
 
-  if (!result) {
-    console.log("Sertifikat tanah gagal dibuat, silahkan periksa data");
+  let result;
+  const t5 = timer();
+  try {
+    result = await createCertificate(createInput);
+    log.timing("createCertificate", t5());
+    log.data("createCertificate result", result);
+  } catch (err) {
+    log.err("createCertificate GAGAL", err);
+    throw err;
   }
 
-  // ─── 4. Skip: mintingNft (blockchain) → return fake tokenId ────────────
-  console.log(`[MOCK] mintingNft skipped → tokenId: ${mockTokenId}`);
-  await new Promise((r) => setTimeout(r, 5)); // simulasi latency minimal
+  if (!result) {
+    log.err("createCertificate return null/undefined");
+    throw new Error("Sertifikat tanah gagal dibuat, silahkan periksa data");
+  }
+  log.ok(`Certificate dibuat — id: ${result.id}, code: ${result.code}`);
 
-  // ─── 5. Skip: generatePDF + encryptFile (CPU berat) ────────────────────
+  // ── 6. [MOCK] Minting NFT ─────────────────────────────────────────────────
+  log.step("6. [MOCK] mintingNft — SKIPPED");
+  const mockTokenId = `token-${Date.now()}`;
+  log.info(`mockTokenId: ${mockTokenId}`);
+  await new Promise((r) => setTimeout(r, 5));
+  log.ok("mintingNft mock selesai (5ms delay)");
+
+  // ── 7. [MOCK] Generate PDF + Encrypt + IPFS ───────────────────────────────
+  log.step("7. [MOCK] generatePDF + encryptFile + IPFS upload — SKIPPED");
   const mockPdfBuffer = Buffer.from(`mock-pdf-${fileNumber}`);
+  const mockCid = `Qm${Math.random().toString(36).slice(2, 38)}`;
+  log.info(`mockCid: ${mockCid}`);
+  log.info(`mockPdfBuffer: ${mockPdfBuffer.length} bytes`);
 
-  // ─── 6. Skip: uploadFile IPFS → return fake CID ────────────────────────
-  console.log(`[MOCK] IPFS upload skipped → cid: ${mockCid}`);
-
-  // ─── 7. NYATA: prisma.certificate.update (hash + CID) ──────────────────
+  // ── 8. prisma.certificate.update (hash + CID) ─────────────────────────────
+  log.step("8. prisma.certificate.update (hash + CID)");
   const finalHash = `mock-hash-${Date.now()}`;
-  await prisma.certificate.update({
+  const updateInput = {
     where: { id: result.id },
-    data: {
-      hash: finalHash,
-      cid: mockCid,
-    },
+    data: { hash: finalHash, cid: mockCid },
+  };
+  log.data("update input", updateInput);
+
+  let updated;
+  const t8 = timer();
+  try {
+    updated = await prisma.certificate.update(updateInput);
+    log.timing("certificate.update", t8());
+    log.data("certificate.update result", updated);
+  } catch (err) {
+    log.err("prisma.certificate.update GAGAL", err);
+    throw err;
+  }
+  log.ok(`Certificate diupdate — hash: ${finalHash}, cid: ${mockCid}`);
+
+  // ── Done ──────────────────────────────────────────────────────────────────
+  log.section("generateCertificate — DONE");
+  log.data("Summary", {
+    fileNumber,
+    applicationId: application.id,
+    certificateId: result.id,
+    code: result.code,
+    nib,
+    mockTokenId,
+    mockCid,
+    finalHash,
   });
 
-  console.log(
-    `[MOCK] Done — code: ${mockCode}, tokenId: ${mockTokenId}, 'cert_code : ', ${result?.code}`,
-  );
   return mockPdfBuffer;
 };
