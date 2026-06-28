@@ -4,9 +4,12 @@ import { Worker } from "bullmq";
 import { redisConnection, redisPublisher } from "../config/redis.js";
 import "dotenv/config";
 
-const { generateCertificate } = process.env.BLOCKCHAIN_MOCK
-  ? await import("../services/certificate.service.mock.js")
-  : await import("../services/certificate.service.js");
+// const { generateCertificate } = process.env.BLOCKCHAIN_MOCK
+//   ? await import("../services/certificate.service.mock.js")
+//   : await import("../services/certificate.service.js");
+
+const { generateCertificate } =
+  await import("../services/certificate.service.js");
 
 // ─── Channel Redis untuk notifikasi k6 ───────────────────────────────────────
 // K6 akan poll endpoint HTTP yang subscribe channel ini

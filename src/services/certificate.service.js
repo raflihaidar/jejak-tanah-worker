@@ -72,54 +72,71 @@ export const createCertificate = async (payload) => {
       notes,
       owners,
     } = payload;
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.certificate.update({
-        where: {
-          code: old_code,
-        },
-        data: {
-          status: CertificateStatus.TIDAK_AKTIF,
-        },
-      });
 
-      const certificate = await tx.certificate.upsert({
-        where: {
-          application_id,
-        },
-        update: {},
-        create: {
+    console.log("Memproses peralihan hak sertifikat baru: ", code);
+
+    const result = await prisma.$transaction(async (tx) => {
+      if (old_code) {
+        const oldCert = await tx.certificate.findUnique({
+          where: { code: old_code },
+        });
+
+        if (!oldCert) {
+          throw new Error(
+            `Sertifikat lama dengan kode ${old_code} tidak ditemukan.`,
+          );
+        }
+
+        await tx.certificate.update({
+          where: { code: old_code },
+          data: { status: "TIDAK_AKTIF" },
+        });
+      }
+
+      const certificate = await tx.certificate.create({
+        data: {
           code,
           nib,
           land_id,
-          application_id,
           hash,
           cid,
           type,
-          notes: {
-            createMany: {
-              data: notes.map((note) => ({
-                note,
-              })),
-            },
-          },
+          status: "AKTIF",
+          notes:
+            notes && notes.length > 0
+              ? {
+                  createMany: {
+                    data: notes.map((note) => ({ note })),
+                  },
+                }
+              : undefined,
         },
       });
 
-      await tx.certificateOwner.createMany({
-        data: owners.map((o) => ({
-          certificate_id: certificate.id,
-          person_id: o.id,
-          ownership_pct: o.share,
-        })),
-        skipDuplicates: true,
+      if (owners && owners.length > 0) {
+        await tx.certificateOwner.createMany({
+          data: owners.map((o) => ({
+            certificate_id: certificate.id,
+            person_id: o.id,
+            ownership_pct: o.share,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      await tx.application.update({
+        where: { id: application_id },
+        data: { cert_code: certificate.code },
       });
 
       return certificate;
     });
+
     return result;
   } catch (error) {
-    console.log("error : ", error);
-    new AppError("Gagal melakukan publish");
+    console.error("Gagal melakukan peralihan hak sertifikat:", error);
+    // Pastikan melempar (throw) eror agar controller di atasnya tahu proses gagal
+    throw new AppError(`Gagal melakukan publish: ${error.message}`);
   }
 };
 
@@ -228,11 +245,7 @@ export const generateNIB = async (provinceCode, regencyCode, indeksLetak) => {
   return nib;
 };
 
-export const buildCertificateAssets = async (
-  application,
-  headOffice,
-  hasExistingCert,
-) => {
+export const buildCertificateAssets = async (application, headOffice) => {
   const templatePath = path.join(__dirname, "../templates/certificate.html");
 
   const templateHtml = fs.readFileSync(templatePath, "utf-8");
@@ -251,11 +264,11 @@ export const buildCertificateAssets = async (
   const garudaImage = imageToBase64(garudaPath);
 
   let code;
-  if (!hasExistingCert) {
-    code = generateUniqueCode(6);
-  } else {
-    code = hasExistingCert?.code;
-  }
+  code = generateUniqueCode(6);
+  // if (!hasExistingCert) {
+  // } else {
+  //   code = hasExistingCert?.code;
+  // }
 
   let nib;
   if (!application.nib) {
@@ -344,12 +357,16 @@ export const generateCertificate = async (fileNumber, notes) => {
 
   const hasExistingCert = application.certificate;
 
+  console.log(application.certificate);
+
+  // return;
+
   const headOffice = await findHeadOfficeByLandOffice(
     application.land_office_id,
   );
 
   const { htmlTemplate, garudaImage, code, nib, qr_signature } =
-    await buildCertificateAssets(application, headOffice, hasExistingCert);
+    await buildCertificateAssets(application, headOffice);
 
   const template = handlebars.compile(htmlTemplate);
 
@@ -401,11 +418,25 @@ export const generateCertificate = async (fileNumber, notes) => {
       );
     }
 
-    // ─── 2. Mint NFT untuk mendapatkan tokenId ─────────────────────────────
-    const tokenId = await mintingNft(
-      certificate.id,
-      application.person.wallet_address,
-    );
+    // ─── 2. Cek apakah sertifikat lama sudah punya tokenId NFT ─────────────
+    const previousTokenId = hasExistingCert?.token_id;
+    const isExistingNft = Boolean(previousTokenId);
+
+    console.log("token : ", previousTokenId);
+
+    let tokenId;
+
+    if (previousTokenId) {
+      console.log("[Certificate] TokenId sudah ada, skip minting:", {
+        tokenId: previousTokenId,
+      });
+      tokenId = previousTokenId;
+    } else {
+      tokenId = await mintingNft(
+        certificate.id,
+        application.person.wallet_address,
+      );
+    }
 
     // ─── 3. Generate HTML dengan qr_doc yang sudah ada tokenId ─────────────
     // const qrDocUrl = `${process.env.FE_URL}?tokenId=${tokenId}`;
@@ -476,7 +507,24 @@ export const generateCertificate = async (fileNumber, notes) => {
     );
 
     if (uploadRes?.cid) {
-      await setCertificateCID(tokenId, uploadRes?.cid);
+      if (isExistingNft) {
+        // Token sudah ada → transfer ownership + set CID baru sekaligus
+        // lewat transferOwnershipByBPN (parameter newCid)
+        console.log("[Certificate] Transfer NFT existing & update CID:", {
+          tokenId,
+          newOwner: application.person.wallet_address,
+          cid: uploadRes.cid,
+        });
+
+        await transferNFT(
+          tokenId,
+          application.person.wallet_address,
+          uploadRes.cid,
+        );
+      } else {
+        // Token baru hasil mint → set CID seperti biasa
+        await setCertificateCID(tokenId, uploadRes.cid);
+      }
     }
 
     // ─── 7. Update certificate dengan hash & CID yang final ────────────────
@@ -490,6 +538,7 @@ export const generateCertificate = async (fileNumber, notes) => {
       data: {
         hash: finalDocumentHash,
         cid: uploadRes?.cid || null,
+        token_id: tokenId,
       },
     });
 
@@ -614,4 +663,54 @@ export const setCertificateCIDWithRetry = async (tokenId, cid, retry = 3) => {
   }
 
   throw new Error("Gagal set CID setelah retry", { cause: lastError });
+};
+
+export const transferNFT = async (tokenId, newOwner, newCid) => {
+  try {
+    if (!newOwner) {
+      throw new Error("Alamat newOwner tidak boleh kosong");
+    }
+
+    if (!newCid) {
+      throw new Error("CID tidak boleh kosong");
+    }
+
+    console.log("[NFT] Transfer ownership dimulai:", {
+      tokenId,
+      newOwner,
+      newCid,
+    });
+
+    const txHash = await walletClient.writeContract({
+      ...contractConfig,
+      functionName: "transferOwnershipByBPN",
+      args: [BigInt(tokenId), newOwner, newCid],
+      account: walletClient.account,
+    });
+
+    console.log("[NFT] Transaction sent:", txHash);
+
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
+
+    console.log("[NFT] Transaction confirmed:", {
+      txHash,
+      blockNumber: receipt.blockNumber,
+    });
+
+    return {
+      txHash,
+      receipt,
+    };
+  } catch (error) {
+    console.error("[NFT] Failed transferOwnershipByBPN:", {
+      tokenId,
+      newOwner,
+      newCid,
+      error,
+    });
+
+    throw new Error("Gagal transfer ownership NFT ke smart contract");
+  }
 };

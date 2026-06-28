@@ -12,6 +12,7 @@ enum CertificateStatus {
   DALAM_PROSES
   BERMASALAH
   TIDAK_AKTIF
+  TERJADI_KESALAHAN
 }
 
 enum ApplicationStatus {
@@ -20,6 +21,7 @@ enum ApplicationStatus {
   PENANDATANGANAN
   DITOLAK
   SELESAI
+  TERJADI_KESALAHAN
 }
 
 enum Section {
@@ -112,9 +114,11 @@ model Person {
   publicKey  String? @db.Text
   privateKey String? @db.Text
 
-  nonce     String?  @db.VarChar(100)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  nonce String? @db.VarChar(100)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   accountVerifications AccountVerification[]
   verifiedAccounts     AccountVerification[] @relation("VerificationApprover")
@@ -276,26 +280,27 @@ model Village {
 
 model Certificate {
   id             String            @id @default(uuid()) @db.Uuid
-  token_id       Int?              @unique @db.Integer
+  token_id       Int?              @db.Integer
   nib            String            @db.VarChar(100)
   code           String            @unique @db.VarChar(100)
   land_id        String            @db.Uuid
-  cid            String?           @unique @db.VarChar(255)
+  cid            String?           @db.VarChar(255)
   status         CertificateStatus @default(AKTIF)
   type           CertificateType
   label          String?           @db.VarChar(100)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @default(now())
   hash           String?           @db.VarChar(255)
-  application_id String?           @unique @db.Uuid
+  // application_id String?           @unique @db.Uuid
   tx_hash        String?           @db.VarChar(255)
   payment_status PaymentStatus     @default(PENDING)
   minting_status MintingStatus     @default(PENDING)
 
-  land        Land               @relation(fields: [land_id], references: [id])
-  application Application?       @relation(fields: [application_id], references: [id])
-  owners      CertificateOwner[]
-  notes       CertificateNote[]
+  land         Land               @relation(fields: [land_id], references: [id])
+  // application Application?       @relation(fields: [application_id], references: [id])
+  owners       CertificateOwner[]
+  notes        CertificateNote[]
+  applications Application[]
 
   @@map("certificates")
 }
@@ -370,9 +375,9 @@ model Application {
   person      Person                @relation(fields: [person_id], references: [id])
   landOffice  LandOffice            @relation(fields: [land_office_id], references: [id])
   officer     Person?               @relation("ApplicationOfficer", fields: [officer_id], references: [id])
+  certificate Certificate?          @relation(fields: [cert_code], references: [code])
   document    ApplicationDocument[]
   owners      ApplicationOwner[]
-  certificate Certificate?
 
   @@map("applications")
 }
@@ -462,24 +467,21 @@ model FileCounter {
 }
 
 model Module {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(50)
-  slug        String       @unique @db.VarChar(50)
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(50)
+  slug        String      @unique @db.VarChar(50)
   description String?
   section     String?
   privileges  Privilege[]
-  groupId     Int?         @map("group_id")
-  moduleGroup ModuleGroup? @relation(fields: [groupId], references: [id])
 
   @@map("modules")
 }
 
 model ModuleGroup {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique @db.VarChar(50)
-  slug    String   @unique @db.VarChar(100)
+  id      Int     @id @default(autoincrement())
+  name    String  @unique @db.VarChar(50)
+  slug    String  @unique @db.VarChar(100)
   section Section
-  modules Module[]
 
   @@map("module_groups")
 }
