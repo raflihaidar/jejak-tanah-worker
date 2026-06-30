@@ -1,0 +1,13 @@
+services:
+  worker:
+    build: .
+    container_name: jejak-tanah-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - jejak-tanah-network
+
+networks:
+  jejak-tanah-network:
+    external: true
