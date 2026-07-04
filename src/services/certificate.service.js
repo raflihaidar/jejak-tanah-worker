@@ -23,6 +23,7 @@ import {
   publicClient,
   contractConfig,
 } from "../config/wallet.js";
+import { updateApplicationStatus } from "./application.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -357,10 +358,6 @@ export const generateCertificate = async (fileNumber, notes) => {
 
   const hasExistingCert = application.certificate;
 
-  console.log(application.certificate);
-
-  // return;
-
   const headOffice = await findHeadOfficeByLandOffice(
     application.land_office_id,
   );
@@ -422,8 +419,6 @@ export const generateCertificate = async (fileNumber, notes) => {
     const previousTokenId = hasExistingCert?.token_id;
     const isExistingNft = Boolean(previousTokenId);
 
-    console.log("token : ", previousTokenId);
-
     let tokenId;
 
     if (previousTokenId) {
@@ -437,9 +432,6 @@ export const generateCertificate = async (fileNumber, notes) => {
         application.person.wallet_address,
       );
     }
-
-    // ─── 3. Generate HTML dengan qr_doc yang sudah ada tokenId ─────────────
-    // const qrDocUrl = `${process.env.FE_URL}?tokenId=${tokenId}`;
 
     const qrDocBase64 = await generateQRDoc(tokenId);
 
@@ -533,14 +525,18 @@ export const generateCertificate = async (fileNumber, notes) => {
       .update(pdfBuffer)
       .digest("hex");
 
-    await prisma.certificate.update({
-      where: { id: certificate.id },
-      data: {
-        hash: finalDocumentHash,
-        cid: uploadRes?.cid || null,
-        token_id: tokenId,
-      },
-    });
+    if (pdfBuffer) {
+      await prisma.certificate.update({
+        where: { id: certificate.id },
+        data: {
+          hash: finalDocumentHash,
+          cid: uploadRes?.cid || null,
+          token_id: tokenId,
+        },
+      });
+
+      await updateApplicationStatus(application.id, "SELESAI");
+    }
 
     return pdfBuffer;
   } catch (error) {
