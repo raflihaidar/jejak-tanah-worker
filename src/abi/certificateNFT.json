@@ -5,6 +5,11 @@
                 "internalType": "address",
                 "name": "admin",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "trustedForwarder",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -198,6 +203,12 @@
                 "internalType": "string",
                 "name": "cid",
                 "type": "string"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executedBy",
+                "type": "address"
             }
         ],
         "name": "CertificateCIDSet",
@@ -217,6 +228,12 @@
                 "internalType": "address",
                 "name": "recipient",
                 "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executedBy",
+                "type": "address"
             }
         ],
         "name": "CertificateMinted",
@@ -230,6 +247,12 @@
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executedBy",
+                "type": "address"
             }
         ],
         "name": "CertificateRevoked",
@@ -247,13 +270,13 @@
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "from",
+                "name": "to",
                 "type": "address"
             },
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "to",
+                "name": "executedBy",
                 "type": "address"
             }
         ],
@@ -409,6 +432,19 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "officerAddress",
+                "type": "address"
+            }
+        ],
+        "name": "addOfficer",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "to",
                 "type": "address"
             },
@@ -482,6 +518,11 @@
                         "internalType": "uint256",
                         "name": "timestamp",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "executedBy",
+                        "type": "address"
                     }
                 ],
                 "internalType": "struct CertificateNFT.OwnershipRecord[]",
@@ -580,6 +621,25 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "forwarder",
+                "type": "address"
+            }
+        ],
+        "name": "isTrustedForwarder",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "tokenId",
                 "type": "uint256"
@@ -645,6 +705,19 @@
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "officerAddress",
+                "type": "address"
+            }
+        ],
+        "name": "removeOfficer",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -897,6 +970,19 @@
         "name": "transferOwnershipByBPN",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "trustedForwarder",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     }
 ]

@@ -24,16 +24,18 @@ import {
   contractConfig,
 } from "../config/wallet.js";
 import { updateApplicationStatus } from "./application.service.js";
+import { executeForwardRequest } from "./forwarder.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const encryptFile = (buffer) => {
-  const aesKey = crypto.randomBytes(32);
-  const iv = crypto.randomBytes(12);
+  const aesKey = crypto.randomBytes(32); // private key
+  const iv = crypto.randomBytes(12); // nonce
 
   const cipher = crypto.createCipheriv("aes-256-gcm", aesKey, iv);
 
+  // file yang sudah terenkripsi
   const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
 
   const authTag = cipher.getAuthTag();
@@ -329,7 +331,7 @@ export const generatePDF = async (html) => {
   return pdfBuffer;
 };
 
-export const generateCertificate = async (fileNumber, notes) => {
+export const generateCertificate = async (fileNumber, notes, signedRequest) => {
   const application = await prisma.application.findUnique({
     where: { file_number: fileNumber },
     include: {
@@ -392,8 +394,7 @@ export const generateCertificate = async (fileNumber, notes) => {
   }));
 
   try {
-    // ─── 1. Buat certificate record dulu (tanpa CID) ───────────────────────
-    const documentHash = "pending"; // placeholder, akan diupdate setelah PDF final
+    const documentHash = "pending";
 
     const certificate = await createCertificate({
       old_code: application.cert_code,
@@ -415,7 +416,6 @@ export const generateCertificate = async (fileNumber, notes) => {
       );
     }
 
-    // ─── 2. Cek apakah sertifikat lama sudah punya tokenId NFT ─────────────
     const previousTokenId = hasExistingCert?.token_id;
     const isExistingNft = Boolean(previousTokenId);
 
@@ -427,10 +427,9 @@ export const generateCertificate = async (fileNumber, notes) => {
       });
       tokenId = previousTokenId;
     } else {
-      tokenId = await mintingNft(
-        certificate.id,
-        application.person.wallet_address,
-      );
+      // SEBELUM: mintingNft(certificate.id, application.person.wallet_address)
+      // SESUDAH: lewat forwarder pakai signedRequest dari petugas
+      tokenId = await mintingNft(certificate.id, signedRequest);
     }
 
     const qrDocBase64 = await generateQRDoc(tokenId);
@@ -455,10 +454,8 @@ export const generateCertificate = async (fileNumber, notes) => {
       qr_doc: qrDocBase64,
     });
 
-    // ─── 4. Generate PDF ────────────────────────────────────────────────────
     const pdfBuffer = await generatePDF(html);
 
-    // ─── 5. Enkripsi PDF ────────────────────────────────────────────────────
     const { encryptedBuffer, aesKey, iv, authTag } = encryptFile(
       Buffer.from(pdfBuffer),
     );
@@ -491,7 +488,6 @@ export const generateCertificate = async (fileNumber, notes) => {
       },
     };
 
-    // ─── 6. Upload ke IPFS ──────────────────────────────────────────────────
     const uploadRes = await uploadFile(
       encryptedBuffer,
       `${code}.pdf`,
@@ -500,8 +496,6 @@ export const generateCertificate = async (fileNumber, notes) => {
 
     if (uploadRes?.cid) {
       if (isExistingNft) {
-        // Token sudah ada → transfer ownership + set CID baru sekaligus
-        // lewat transferOwnershipByBPN (parameter newCid)
         console.log("[Certificate] Transfer NFT existing & update CID:", {
           tokenId,
           newOwner: application.person.wallet_address,
@@ -514,12 +508,10 @@ export const generateCertificate = async (fileNumber, notes) => {
           uploadRes.cid,
         );
       } else {
-        // Token baru hasil mint → set CID seperti biasa
         await setCertificateCID(tokenId, uploadRes.cid);
       }
     }
 
-    // ─── 7. Update certificate dengan hash & CID yang final ────────────────
     const finalDocumentHash = crypto
       .createHash("sha256")
       .update(pdfBuffer)
@@ -548,25 +540,20 @@ export const generateCertificate = async (fileNumber, notes) => {
   }
 };
 
-export const mintingNft = async (certificate_id, userAddress) => {
+export const mintingNft = async (certificate_id, signedRequest) => {
+  console.log("signedRequest : ", signedRequest);
   try {
     await prisma.certificate.update({
       where: { id: certificate_id },
       data: { minting_status: MintingStatus.PROCESSING },
     });
 
-    const hash = await walletClient.writeContract({
-      ...contractConfig,
-      functionName: "mintCertificate",
-      args: [userAddress],
-    });
+    const { txHash, receipt } = await executeForwardRequest(signedRequest);
 
     await prisma.certificate.update({
       where: { id: certificate_id },
-      data: { tx_hash: hash },
+      data: { tx_hash: txHash },
     });
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
     const logs = parseEventLogs({
       abi: contractConfig.abi,

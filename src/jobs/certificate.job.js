@@ -1,11 +1,16 @@
 import { certificateQueue } from "../queues/certificate.queue.js";
 
-export const addCertificateJob = async ({ fileNumber, notes }) => {
+export const addCertificateJob = async ({
+  fileNumber,
+  notes,
+  signedRequest,
+}) => {
   const job = await certificateQueue.add(
     "issue-certificate",
     {
       fileNumber,
       notes,
+      signedRequest,
     },
     {
       jobId: `cert-${fileNumber}-${Date.now()}`,

@@ -11,12 +11,8 @@ import "dotenv/config";
 const { generateCertificate } =
   await import("../services/certificate.service.js");
 
-// ─── Channel Redis untuk notifikasi k6 ───────────────────────────────────────
-// K6 akan poll endpoint HTTP yang subscribe channel ini
-// Format pesan: JSON { jobId, fileNumber, status, durationMs, error? }
 const CHANNEL = "certificate:done";
 
-// ─── Helper: publish hasil ke Redis ──────────────────────────────────────────
 async function publishResult(payload) {
   try {
     await redisPublisher.publish(CHANNEL, JSON.stringify(payload));
@@ -26,17 +22,36 @@ async function publishResult(payload) {
   }
 }
 
-// ─── Worker ───────────────────────────────────────────────────────────────────
+// BigInt tidak survive lewat Redis/JSON — signedRequest yang masuk job.data
+// selalu berbentuk string untuk value/gas, harus di-reconstruct dulu
+function normalizeSignedRequest(signedRequest) {
+  if (!signedRequest) return signedRequest;
+
+  return {
+    ...signedRequest,
+    value: BigInt(signedRequest.value),
+    gas: BigInt(signedRequest.gas),
+  };
+}
+
 export const certificateWorker = new Worker(
   "certificate",
   async (job) => {
-    const { fileNumber, notes } = job.data;
+    const { fileNumber, notes, signedRequest } = job.data;
     const startedAt = Date.now();
+
+    if (!signedRequest?.signature) {
+      throw new Error(
+        `Job ${job.id} tidak memiliki signedRequest yang valid — kemungkinan job lama sebelum forwarder diimplementasikan`,
+      );
+    }
 
     console.log(`\n🔧 Processing job ${job.id} — fileNumber: ${fileNumber}`);
     await job.updateProgress(10);
 
-    await generateCertificate(fileNumber, notes);
+    const normalizedRequest = normalizeSignedRequest(signedRequest);
+
+    await generateCertificate(fileNumber, notes, normalizedRequest);
     await job.updateProgress(100);
 
     const durationMs = Date.now() - startedAt;
@@ -47,14 +62,11 @@ export const certificateWorker = new Worker(
   {
     connection: redisConnection,
     concurrency: 5,
-
-    // Fix: OOM — hapus job lama dari Redis secara otomatis
-    removeOnComplete: { count: 500 }, // simpan max 500 job completed
-    removeOnFail: { count: 100 }, // simpan max 100 job failed untuk debug
+    removeOnComplete: { count: 500 },
+    removeOnFail: { count: 100 },
   },
 );
 
-// ─── Event: completed → publish sukses ───────────────────────────────────────
 certificateWorker.on("completed", async (job, returnValue) => {
   console.log(`✅ [${job.id}] completed`);
 
@@ -67,7 +79,6 @@ certificateWorker.on("completed", async (job, returnValue) => {
   });
 });
 
-// ─── Event: failed → publish gagal ───────────────────────────────────────────
 certificateWorker.on("failed", async (job, err) => {
   console.error(`❌ [${job?.id}] failed:`, err.message);
 
