@@ -4,7 +4,11 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { CertificateStatus, MintingStatus } from "../generated/prisma/enums.ts";
+import {
+  ApplicationStatus,
+  CertificateStatus,
+  MintingStatus,
+} from "../generated/prisma/enums.ts";
 import { parseEventLogs } from "viem";
 import QRCode from "qrcode";
 import crypto from "crypto";
@@ -50,12 +54,7 @@ export const encryptFile = (buffer) => {
 
 const encryptAESKey = (aesKey, userPublicKeyHex) => {
   const publicKeyBuffer = Buffer.from(userPublicKeyHex, "hex");
-
-  // 2. Proses Enkripsi ECIES
-  // eciesjs melakukan: KEM (Key Encapsulation) + AES-GCM secara otomatis
   const encryptedBuffer = encrypt(publicKeyBuffer, Buffer.from(aesKey));
-
-  // 3. Kembalikan hasil dalam format Base64 (atau Hex) untuk disimpan
   return {
     encryptedKey: Buffer.from(encryptedBuffer).toString("base64"),
   };
@@ -143,24 +142,24 @@ export const createCertificate = async (payload) => {
   }
 };
 
-export const generateUniqueCode = (length = 6) => {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+// export const generateUniqueCode = (length = 6) => {
+//   const chars =
+//     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-  const randomSeed = Date.now().toString() + Math.random().toString();
+//   const randomSeed = Date.now().toString() + Math.random().toString();
 
-  const hash = CryptoJS.SHA256(randomSeed).toString();
+//   const hash = CryptoJS.SHA256(randomSeed).toString();
 
-  let result = "";
+//   let result = "";
 
-  for (let i = 0; i < length; i++) {
-    const index = parseInt(hash.substring(i * 2, i * 2 + 2), 16) % chars.length;
+//   for (let i = 0; i < length; i++) {
+//     const index = parseInt(hash.substring(i * 2, i * 2 + 2), 16) % chars.length;
 
-    result += chars[index];
-  }
+//     result += chars[index];
+//   }
 
-  return result;
-};
+//   return result;
+// };
 
 export const generateQRDoc = async (tokenId) => {
   const url = `${process.env.FE_URL}/verify/certificate/${tokenId}`;
@@ -205,16 +204,42 @@ export const generateQRSignature = async (payload, encryptedPrivateKey) => {
   return qrCode;
 };
 
-export const generateNIB = async (provinceCode, regencyCode, indeksLetak) => {
-  if (indeksLetak < 0 || indeksLetak > 9) {
-    throw new Error("Indeks letak harus antara 0 - 9");
+export const generateUniqueCode = (length = 6) => {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  const randomSeed = Date.now().toString() + Math.random().toString();
+
+  const hash = CryptoJS.SHA256(randomSeed).toString();
+
+  let result = "";
+
+  for (let i = 0; i < length; i++) {
+    const index = parseInt(hash.substring(i * 2, i * 2 + 2), 16) % chars.length;
+
+    result += chars[index];
   }
+
+  return result;
+};
+
+export const generateNIB = async (
+  provinceCode,
+  regencyCode,
+  districtCode,
+  villageCode,
+) => {
+  const provStr = provinceCode.toString().padStart(2, "0");
+  const regStr = (regencyCode % 100).toString().padStart(2, "0");
+  const distStr = (districtCode % 100).toString().padStart(2, "0");
+  const villStr = (villageCode % 100).toString().padStart(2, "0");
+
+  const prefixNIB = `${provStr}.${regStr}.${distStr}.${villStr}`;
 
   const lastCertificate = await prisma.certificate.findFirst({
     where: {
-      land: {
-        province_code: provinceCode,
-        regency_code: regencyCode,
+      nib: {
+        startsWith: prefixNIB,
       },
     },
     orderBy: {
@@ -228,24 +253,18 @@ export const generateNIB = async (provinceCode, regencyCode, indeksLetak) => {
   let nextSequence = 1;
 
   if (lastCertificate?.nib) {
-    const lastSequence = lastCertificate.nib.slice(6, 15);
-    nextSequence = parseInt(lastSequence) + 1;
+    const parts = lastCertificate.nib.split(".");
+    if (parts.length === 5) {
+      const lastSequence = parseInt(parts[4], 10);
+      if (!isNaN(lastSequence)) {
+        nextSequence = lastSequence + 1;
+      }
+    }
   }
 
-  const sequenceFormatted = nextSequence.toString().padStart(9, "0");
+  const sequenceFormatted = nextSequence.toString().padStart(5, "0");
 
-  const formatedRegencyCode = regencyCode % 100;
-
-  const nib =
-    provinceCode.toString().padStart(2, "0") +
-    "." +
-    formatedRegencyCode.toString().padStart(2, "0") +
-    "." +
-    sequenceFormatted +
-    "." +
-    indeksLetak.toString();
-
-  return nib;
+  return `${prefixNIB}.${sequenceFormatted}`;
 };
 
 export const buildCertificateAssets = async (application, headOffice) => {
@@ -278,7 +297,8 @@ export const buildCertificateAssets = async (application, headOffice) => {
     nib = await generateNIB(
       application?.land?.province_code,
       application?.land?.regency_code,
-      1,
+      application?.land?.district_code,
+      application?.land?.village_code,
     );
   } else {
     nib = application.nib;
@@ -302,6 +322,40 @@ export const buildCertificateAssets = async (application, headOffice) => {
     nib,
     qr_signature,
   };
+};
+
+export const buildCertificateAssetsForExisting = async (
+  application,
+  headOffice,
+  code,
+  nib,
+) => {
+  const templatePath = path.join(__dirname, "../templates/certificate.html");
+  const templateHtml = fs.readFileSync(templatePath, "utf-8");
+
+  const cssPath = path.join(__dirname, "../templates/certificate.css");
+  const css = fs.readFileSync(cssPath, "utf-8");
+
+  const htmlTemplate = templateHtml.replace(
+    "</head>",
+    `<style>${css}</style></head>`,
+  );
+
+  const garudaPath = path.join(__dirname, "../assets/lambang-pancasila.png");
+  const garudaImage = imageToBase64(garudaPath);
+
+  const payload = JSON.stringify({
+    code,
+    nib,
+    owner: application.person.name,
+  });
+
+  const qr_signature = await generateQRSignature(
+    payload,
+    headOffice.privateKey,
+  );
+
+  return { htmlTemplate, garudaImage, qr_signature };
 };
 
 export const generatePDF = async (html) => {
@@ -358,79 +412,128 @@ export const generateCertificate = async (fileNumber, notes, signedRequest) => {
     throw new Error("Application tidak ditemukan");
   }
 
-  const hasExistingCert = application.certificate;
+  application.owners.forEach((owner) => {
+    if (!owner.person.publicKey) {
+      throw new AppError(
+        `Owner ${owner.person.name} belum melakukan registrasi kunci publik.`,
+        400,
+      );
+    }
+    if (!owner.person.wallet_address) {
+      throw new AppError(
+        `Owner ${owner.person.name} belum memiliki wallet address.`,
+        400,
+      );
+    }
+  });
+
+  const existingDraft =
+    application.certificate &&
+    [CertificateStatus.DRAFT, CertificateStatus.TERJADI_KESALAHAN].includes(
+      application.certificate.status,
+    )
+      ? application.certificate
+      : null;
+
+  const hasExistingActiveCert =
+    application.certificate?.status === "AKTIF"
+      ? application.certificate
+      : null;
 
   const headOffice = await findHeadOfficeByLandOffice(
     application.land_office_id,
   );
 
-  const { htmlTemplate, garudaImage, code, nib, qr_signature } =
-    await buildCertificateAssets(application, headOffice);
-
-  const template = handlebars.compile(htmlTemplate);
-
-  const certificateType = [
-    { label: "Hak Milik", value: "SHM" },
-    { label: "Hak Guna Usaha", value: "SHGU" },
-    { label: "Hak Guna Bangunan", value: "SHGB" },
-  ];
-
-  const selectedCertificateType = certificateType.find(
-    (item) => item.value === application.type,
-  );
-
-  const owners = application.owners.map((owner, index) => ({
-    no: index + 1,
-    id: owner.person.id,
-    name: owner.person.name,
-    birthPlace: owner.person.birthPlace,
-    birthDate: formatDateIndonesia(owner.person.birthDate),
-    share: owner.share,
-  }));
-
-  const noteList = notes.map((n, index) => ({
-    no: index + 1,
-    note: n,
-  }));
+  let certificate;
+  let code, nib, htmlTemplate, garudaImage, qr_signature;
 
   try {
-    const documentHash = "pending";
-
-    const certificate = await createCertificate({
-      old_code: application.cert_code,
-      nib,
-      hash: documentHash,
-      code,
-      land_id: application.land_id,
-      status: CertificateStatus.AKTIF,
-      type: application.type,
-      application_id: application.id,
-      notes,
-      owners,
-    });
-
-    if (!certificate) {
-      throw new AppError(
-        "Sertifikat tanah gagal dibuat, silahkan periksa data",
-        400,
+    if (existingDraft) {
+      console.log(
+        `[Certificate] Melanjutkan draft existing: ${existingDraft.code}`,
       );
+      certificate = existingDraft;
+      code = existingDraft.code;
+      nib = existingDraft.nib;
+
+      const assets = await buildCertificateAssetsForExisting(
+        application,
+        headOffice,
+        code,
+        nib,
+      );
+      htmlTemplate = assets.htmlTemplate;
+      garudaImage = assets.garudaImage;
+      qr_signature = assets.qr_signature;
+    } else {
+      // Buat draft baru
+      const assets = await buildCertificateAssets(application, headOffice);
+      htmlTemplate = assets.htmlTemplate;
+      garudaImage = assets.garudaImage;
+      code = assets.code;
+      nib = assets.nib;
+      qr_signature = assets.qr_signature;
+
+      certificate = await createCertificate({
+        old_code: application.cert_code,
+        nib,
+        hash: "pending",
+        code,
+        land_id: application.land_id,
+        status: CertificateStatus.DRAFT,
+        type: application.type,
+        application_id: application.id,
+        notes,
+        owners: application.owners.map((owner, index) => ({
+          no: index + 1,
+          id: owner.person.id,
+          share: owner.share,
+        })),
+      });
+
+      if (!certificate) {
+        throw new AppError(
+          "Sertifikat tanah gagal dibuat, silahkan periksa data administrasi kembali",
+          400,
+        );
+      }
     }
 
-    const previousTokenId = hasExistingCert?.token_id;
+    const previousTokenId =
+      hasExistingActiveCert?.token_id ?? certificate.token_id;
     const isExistingNft = Boolean(previousTokenId);
 
     let tokenId;
-
     if (previousTokenId) {
       console.log("[Certificate] TokenId sudah ada, skip minting:", {
         tokenId: previousTokenId,
       });
       tokenId = previousTokenId;
     } else {
-      // SEBELUM: mintingNft(certificate.id, application.person.wallet_address)
-      // SESUDAH: lewat forwarder pakai signedRequest dari petugas
       tokenId = await mintingNft(certificate.id, signedRequest);
     }
+
+    const template = handlebars.compile(htmlTemplate);
+
+    const certificateType = [
+      { label: "Hak Milik", value: "SHM" },
+      { label: "Hak Guna Usaha", value: "SHGU" },
+      { label: "Hak Guna Bangunan", value: "SHGB" },
+    ];
+    const selectedCertificateType = certificateType.find(
+      (item) => item.value === application.type,
+    );
+
+    const owners = application.owners.map((owner, index) => ({
+      no: index + 1,
+      id: owner.person.id,
+      name: owner.person.name,
+      birthPlace: owner.person.birthPlace,
+      birthDate: formatDateIndonesia(owner.person.birthDate),
+      share: owner.share,
+    }));
+
+    const noteList = notes.map((n, index) => ({ no: index + 1, note: n }));
 
     const qrDocBase64 = await generateQRDoc(tokenId);
 
@@ -461,16 +564,7 @@ export const generateCertificate = async (fileNumber, notes, signedRequest) => {
     );
 
     const encryptedKeysForOwners = application.owners.map((owner) => {
-      const userPubKey = owner.person.publicKey;
-
-      if (!userPubKey) {
-        throw new Error(
-          `Owner ${owner.person.name} belum melakukan registrasi kunci publik.`,
-        );
-      }
-
-      const wrapped = encryptAESKey(aesKey, userPubKey);
-
+      const wrapped = encryptAESKey(aesKey, owner.person.publicKey);
       return {
         walletAddress: owner.person.wallet_address,
         encryptedKey: wrapped.encryptedKey,
@@ -496,12 +590,6 @@ export const generateCertificate = async (fileNumber, notes, signedRequest) => {
 
     if (uploadRes?.cid) {
       if (isExistingNft) {
-        console.log("[Certificate] Transfer NFT existing & update CID:", {
-          tokenId,
-          newOwner: application.person.wallet_address,
-          cid: uploadRes.cid,
-        });
-
         await transferNFT(
           tokenId,
           application.person.wallet_address,
@@ -517,31 +605,59 @@ export const generateCertificate = async (fileNumber, notes, signedRequest) => {
       .update(pdfBuffer)
       .digest("hex");
 
-    if (pdfBuffer) {
-      await prisma.certificate.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.certificate.update({
         where: { id: certificate.id },
         data: {
           hash: finalDocumentHash,
           cid: uploadRes?.cid || null,
           token_id: tokenId,
+          status: CertificateStatus.AKTIF,
         },
       });
 
-      await updateApplicationStatus(application.id, "SELESAI");
-    }
+      await updateApplicationStatus(application.id, "SELESAI", tx);
+    });
 
     return pdfBuffer;
   } catch (error) {
-    console.log(error);
+    console.error("[Certificate] Proses gagal, melakukan kompensasi:", error);
+    if (certificate?.id) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          await tx.certificate.update({
+            where: { id: certificate.id },
+            data: { status: CertificateStatus.TERJADI_KESALAHAN },
+          });
+
+          if (application.cert_code) {
+            await tx.certificate.update({
+              where: { code: application.cert_code },
+              data: { status: CertificateStatus.AKTIF },
+            });
+          }
+        });
+      } catch (compensationError) {
+        console.error(
+          "[Certificate] Kompensasi juga gagal:",
+          compensationError,
+        );
+      }
+    }
+
+    await updateApplicationStatus(
+      application.id,
+      ApplicationStatus.PENERBITAN_GAGAL,
+    );
+
     throw new AppError(
-      `Terjadi kesalahan pada saat generate certificate dengan code ${code}`,
+      `Terjadi kesalahan pada saat generate certificate dengan code ${code}: ${error.message}`,
       400,
     );
   }
 };
 
 export const mintingNft = async (certificate_id, signedRequest) => {
-  console.log("signedRequest : ", signedRequest);
   try {
     await prisma.certificate.update({
       where: { id: certificate_id },

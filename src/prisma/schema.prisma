@@ -3,19 +3,13 @@ generator client {
   output   = "../generated/prisma"
 }
 
-// generator erd {
-//   provider    = "prisma-erd-generator"
-//   output      = "./ERD.pdf"
-//   ignoreEnums = true
-//   tableOnly = true
-// }
-
 datasource db {
   provider = "postgresql"
 }
 
 enum CertificateStatus {
   AKTIF
+  DRAFT
   DALAM_PROSES
   BERMASALAH
   TIDAK_AKTIF
@@ -27,6 +21,7 @@ enum ApplicationStatus {
   MENUNGGU_PEMBAYARAN
   VERIFIKASI_PEMBAYARAN
   PROSES_PENERBITAN
+  PENERBITAN_GAGAL
   DITOLAK
   SELESAI
   TERJADI_KESALAHAN

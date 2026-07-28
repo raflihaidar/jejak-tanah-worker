@@ -1,12 +1,6 @@
-// workers/certificate.worker.js
-// Fix: publish event ke Redis setelah worker selesai, agar k6 bisa ukur keberhasilan
 import { Worker } from "bullmq";
 import { redisConnection, redisPublisher } from "../config/redis.js";
 import "dotenv/config";
-
-// const { generateCertificate } = process.env.BLOCKCHAIN_MOCK
-//   ? await import("../services/certificate.service.mock.js")
-//   : await import("../services/certificate.service.js");
 
 const { generateCertificate } =
   await import("../services/certificate.service.js");
@@ -16,14 +10,12 @@ const CHANNEL = "certificate:done";
 async function publishResult(payload) {
   try {
     await redisPublisher.publish(CHANNEL, JSON.stringify(payload));
-    console.log(`📢 Published ke [${CHANNEL}]:`, payload);
+    console.log(`Published ke [${CHANNEL}]:`, payload);
   } catch (err) {
-    console.error("❌ Gagal publish ke Redis:", err.message);
+    console.error("Gagal publish ke Redis:", err.message);
   }
 }
 
-// BigInt tidak survive lewat Redis/JSON — signedRequest yang masuk job.data
-// selalu berbentuk string untuk value/gas, harus di-reconstruct dulu
 function normalizeSignedRequest(signedRequest) {
   if (!signedRequest) return signedRequest;
 
@@ -46,7 +38,7 @@ export const certificateWorker = new Worker(
       );
     }
 
-    console.log(`\n🔧 Processing job ${job.id} — fileNumber: ${fileNumber}`);
+    console.log(`\nProcessing job ${job.id} — fileNumber: ${fileNumber}`);
     await job.updateProgress(10);
 
     const normalizedRequest = normalizeSignedRequest(signedRequest);
@@ -55,7 +47,7 @@ export const certificateWorker = new Worker(
     await job.updateProgress(100);
 
     const durationMs = Date.now() - startedAt;
-    console.log(`✅ Job ${job.id} selesai dalam ${durationMs}ms`);
+    console.log(`Job ${job.id} selesai dalam ${durationMs}ms`);
 
     return { success: true, durationMs };
   },
@@ -68,8 +60,6 @@ export const certificateWorker = new Worker(
 );
 
 certificateWorker.on("completed", async (job, returnValue) => {
-  console.log(`✅ [${job.id}] completed`);
-
   await publishResult({
     jobId: job.id,
     fileNumber: job.data.fileNumber,

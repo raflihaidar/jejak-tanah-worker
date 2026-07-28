@@ -1,9 +1,9 @@
 import { AppError } from "../utils/error.js";
 import { prisma } from "../config/prisma.js";
 
-export const updateApplicationStatus = async (id, status) => {
+export const updateApplicationStatus = async (id, status, client = prisma) => {
   try {
-    const application = await prisma.application.update({
+    const application = await client.application.update({
       where: {
         id,
       },
