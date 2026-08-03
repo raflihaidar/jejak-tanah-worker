@@ -142,25 +142,6 @@ export const createCertificate = async (payload) => {
   }
 };
 
-// export const generateUniqueCode = (length = 6) => {
-//   const chars =
-//     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-//   const randomSeed = Date.now().toString() + Math.random().toString();
-
-//   const hash = CryptoJS.SHA256(randomSeed).toString();
-
-//   let result = "";
-
-//   for (let i = 0; i < length; i++) {
-//     const index = parseInt(hash.substring(i * 2, i * 2 + 2), 16) % chars.length;
-
-//     result += chars[index];
-//   }
-
-//   return result;
-// };
-
 export const generateQRDoc = async (tokenId) => {
   const url = `${process.env.FE_URL}/verify/certificate/${tokenId}`;
 
@@ -287,10 +268,6 @@ export const buildCertificateAssets = async (application, headOffice) => {
 
   let code;
   code = generateUniqueCode(6);
-  // if (!hasExistingCert) {
-  // } else {
-  //   code = hasExistingCert?.code;
-  // }
 
   let nib;
   if (!application.nib) {
@@ -671,16 +648,37 @@ export const mintingNft = async (certificate_id, signedRequest) => {
       data: { tx_hash: txHash },
     });
 
-    const logs = parseEventLogs({
+    let tokenId;
+
+    const mintLogs = parseEventLogs({
       abi: contractConfig.abi,
       eventName: "CertificateMinted",
       logs: receipt.logs,
     });
 
-    if (logs.length === 0)
-      throw new Error("Event CertificateMinted tidak ditemukan");
+    if (mintLogs.length > 0) {
+      tokenId = mintLogs[0].args.tokenId.toString();
+    } else {
+      const transferLogs = parseEventLogs({
+        abi: contractConfig.abi,
+        eventName: "OwnershipTransferredByBPN",
+        logs: receipt.logs,
+      });
 
-    const tokenId = logs[0].args.tokenId.toString();
+      if (transferLogs.length > 0) {
+        tokenId = transferLogs[0].args.tokenId.toString();
+      } else {
+        // Catatan: contract saat ini tidak punya getter semacam
+        // `getActiveTokenIdByNib`, jadi tidak ada fallback lain untuk
+        // menemukan tokenId selain dari event mint/transfer itu sendiri.
+        // Kalau ini sering kejadian (mis. worker retry setelah tx sukses
+        // tapi proses keburu mati), perlu ditambahkan mapping nib => tokenId
+        // + view function di smart contract.
+        throw new Error(
+          "Event CertificateMinted/OwnershipTransferredByBPN tidak ditemukan di receipt",
+        );
+      }
+    }
 
     await prisma.certificate.update({
       where: { id: certificate_id },
@@ -718,7 +716,6 @@ export const setCertificateCID = async (tokenId, cid) => {
 
     console.log("[NFT] Transaction sent:", txHash);
 
-    // optional: wait for confirmation
     const receipt = await publicClient.waitForTransactionReceipt({
       hash: txHash,
     });

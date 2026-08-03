@@ -226,6 +226,49 @@
             {
                 "indexed": true,
                 "internalType": "address",
+                "name": "petugasPenerbit",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "petugasLoket",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "nib",
+                "type": "string"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "luasTanah",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "tipeSertifikat",
+                "type": "string"
+            }
+        ],
+        "name": "CertificateDetailsSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
                 "name": "recipient",
                 "type": "address"
             },
@@ -505,6 +548,52 @@
                 "type": "uint256"
             }
         ],
+        "name": "getCertificateDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "petugasPenerbit",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "petugasLoket",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "nib",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "luasTanah",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "tipeSertifikat",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct CertificateNFT.CertificateDetails",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
         "name": "getOwnershipHistory",
         "outputs": [
             {
@@ -662,6 +751,26 @@
                 "internalType": "address",
                 "name": "recipient",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "petugasLoket",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "nib",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "luasTanah",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "tipeSertifikat",
+                "type": "string"
             }
         ],
         "name": "mintCertificate",

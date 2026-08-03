@@ -1,4 +1,3 @@
-`import { encodeFunctionData } from "viem";`;
 import {
   publicClient,
   walletClient,
@@ -6,9 +5,6 @@ import {
   forwarderConfig,
 } from "../config/wallet.js";
 
-// Dipakai worker untuk validasi ulang sebelum eksekusi —
-// job bisa sempat mengantre lama, jadi deadline dari signature
-// awal bisa saja sudah lewat saat giliran job ini diproses.
 export const verifyForwardRequest = async (requestData) => {
   return await publicClient.readContract({
     ...forwarderConfig,
@@ -17,8 +13,6 @@ export const verifyForwardRequest = async (requestData) => {
   });
 };
 
-// Dipanggil setelah aset sertifikat siap — relayer (walletClient) yang
-// submit & bayar gas, tapi _msgSender() on-chain tetap resolve ke petugas
 export const executeForwardRequest = async (requestData) => {
   const isValid = await verifyForwardRequest(requestData);
 
